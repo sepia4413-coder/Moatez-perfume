@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fragrance Dream</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top"><div class="brand"><span class="logo">✦</span><div><b id="storeName">FRAGRANCE DREAM</b><small>متجر العطور</small></div></div><a class="admin-link" href="admin.html">الإدارة</a></header>
+<section class="hero"><div class="hero-logo">✦</div><h1 id="heroName">FRAGRANCE DREAM</h1><p id="tagline">عطور فاخرة تحكي حلمك</p></section>
+<div class="toolbar"><input id="search" placeholder="ابحث عن عطر أو ماركة..."><div class="chips"><button class="chip active" data-type="all">الكل</button><button class="chip" data-type="own">تركيبتنا الخاصة</button><button class="chip" data-type="imp">مستورد</button></div></div>
+<main id="grid" class="grid"><div class="loading">جارٍ تحميل العطور...</div></main>
+<footer>© <span id="footName">FRAGRANCE DREAM</span></footer>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-card"><button class="close" id="close">×</button><h2>طلب العطر</h2><div id="orderProduct" class="order-product"></div><form id="orderForm"><input type="hidden" id="productId"><label>الاسم الكامل<input id="customerName" required></label><label>رقم الهاتف<input id="phone" required></label><label>العنوان<input id="address" required></label><label>الكمية<input id="quantity" type="number" min="1" max="50" value="1" required></label><label>ملاحظة (اختياري)<textarea id="note" rows="3"></textarea></label><button class="primary" type="submit">تأكيد الطلب</button><p id="orderStatus" class="status"></p></form></div></div>
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const c=window.ROQI_CONFIG||{};
+const sb=createClient(c.SUPABASE_URL,c.SUPABASE_ANON_KEY);
+const $=s=>document.querySelector(s); let products=[]; let type='all';
+$('#storeName').textContent=c.STORE_NAME||'FRAGRANCE DREAM'; $('#heroName').textContent=c.STORE_NAME||'FRAGRANCE DREAM'; $('#footName').textContent=c.STORE_NAME||'FRAGRANCE DREAM'; $('#tagline').textContent=c.STORE_TAGLINE||'عطور فاخرة تحكي حلمك'; document.title=c.STORE_NAME||'FRAGRANCE DREAM';
+function money(n){return Number(n).toLocaleString('fr-FR')+' '+(c.CURRENCY||'DA')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function render(){const q=$('#search').value.trim().toLowerCase(); const list=products.filter(p=>(type==='all'||p.type===type)&&(`${p.name} ${p.brand||''}`.toLowerCase().includes(q))); $('#grid').innerHTML=list.length?list.map(p=>`<article class="card"><div class="photo">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}">`:'<div class="empty-photo">✦</div>'}</div><div class="body"><div class="tag">${p.type==='own'?'تركيبتنا الخاصة':'مستورد'}${p.brand?' · '+esc(p.brand):''}</div><h3>${esc(p.name)}</h3><div class="meta">${esc(p.size||'')}</div><p>${esc(p.description||'')}</p><div class="price">${money(p.price)} ${p.old_price?`<s>${money(p.old_price)}</s>`:''}</div><button class="primary order" data-id="${p.id}">اطلب الآن</button></div></article>`).join(''):'<div class="empty">لا توجد عطور حالياً.</div>'; document.querySelectorAll('.order').forEach(b=>b.onclick=()=>openOrder(b.dataset.id));}
+async function load(){const {data,error}=await sb.from('products').select('*').order('created_at',{ascending:false}); if(error){$('#grid').innerHTML='<div class="empty">تعذر تحميل العطور. راجع إعدادات Supabase في config.js.</div>'; return} products=data||[]; render();}
+function openOrder(id){const p=products.find(x=>x.id===id); if(!p)return; $('#productId').value=id; $('#orderProduct').innerHTML=`<b>${esc(p.name)}</b><span>${money(p.price)}</span>`; $('#modal').classList.remove('hidden'); $('#orderStatus').textContent='';}
+$('#close').onclick=()=>$('#modal').classList.add('hidden'); $('#modal').onclick=e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden')}; $('#search').oninput=render; document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');type=b.dataset.type;render()});
+$('#orderForm').onsubmit=async e=>{e.preventDefault(); const status=$('#orderStatus'); const payload={product_id:$('#productId').value,customer_name:$('#customerName').value.trim(),phone:$('#phone').value.trim(),address:$('#address').value.trim(),quantity:+$('#quantity').value,note:$('#note').value.trim()}; status.textContent='جارٍ إرسال الطلب...'; const {error}=await sb.from('orders').insert(payload); if(error){status.textContent='تعذر إرسال الطلب، تحقق من البيانات وحاول مرة أخرى.'; return} status.textContent='تم إرسال طلبك بنجاح ✓'; e.target.reset(); $('#quantity').value=1;};
+load();
+</script>
+</body></html>
